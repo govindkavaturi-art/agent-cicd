@@ -1,0 +1,33 @@
+name: Production Verify
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    if: false  # Remove this line when using in your own repo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for production deploy
+        run: sleep 120
+      - name: Create verify-production cue
+        run: |
+          curl -s -X POST https://api.cueapi.ai/v1/cues \
+            -H "Authorization: Bearer ${{ secrets.CUEAPI_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "verify-production-${{ github.run_id }}",
+              "schedule": {
+                "type": "once",
+                "at": "'$(date -u -d '+1 minute' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -v+1M '+%Y-%m-%dT%H:%M:%SZ')'"
+              },
+              "transport": "worker",
+              "task": "verify-production",
+              "payload": {
+                "commit": "${{ github.sha }}",
+                "branch": "main",
+                "actor": "${{ github.actor }}",
+                "run_id": "${{ github.run_id }}"
+              }
+            }'

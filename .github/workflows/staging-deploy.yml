@@ -1,0 +1,62 @@
+name: Staging Deploy
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy-and-verify:
+    if: false  # Remove this line when using in your own repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up your environment
+        run: echo "TODO: Set up your environment here"
+      - name: Run tests
+        run: echo "TODO: Replace with YOUR_TEST_COMMAND"
+      - name: Deploy to staging
+        run: |
+          # Replace with your deploy command. Examples:
+          # curl -X POST https://api.render.com/deploy/...
+          # flyctl deploy --app my-staging-app
+          # railway up --environment staging
+          echo "TODO: Replace with YOUR_DEPLOY_COMMAND"
+      - name: Wait for deploy
+        run: sleep 120
+      - name: Verify staging health
+        id: health
+        run: |
+          EXPECTED_COMMIT="${GITHUB_SHA:0:7}"
+          for i in 1 2 3 4 5; do
+            RESPONSE=$(curl -s ${{ secrets.HEALTH_ENDPOINT_URL }})
+            DEPLOYED_COMMIT=$(echo "$RESPONSE" | jq -r '.commit' | head -c 7)
+            if [ "$DEPLOYED_COMMIT" = "$EXPECTED_COMMIT" ]; then
+              echo "Health check passed. Commit $EXPECTED_COMMIT deployed."
+              exit 0
+            fi
+            echo "Attempt $i: expected $EXPECTED_COMMIT, got $DEPLOYED_COMMIT. Retrying in 30s..."
+            sleep 30
+          done
+          echo "Health check failed after 5 attempts."
+          exit 1
+      - name: Create CueAPI test cue
+        if: success()
+        run: |
+          curl -s -X POST https://api.cueapi.ai/v1/cues \
+            -H "Authorization: Bearer ${{ secrets.CUEAPI_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "test-staging-${{ github.run_id }}",
+              "schedule": {
+                "type": "once",
+                "at": "'$(date -u -d '+1 minute' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -v+1M '+%Y-%m-%dT%H:%M:%SZ')'"
+              },
+              "transport": "worker",
+              "task": "test-staging",
+              "payload": {
+                "commit": "${{ github.sha }}",
+                "branch": "staging",
+                "actor": "${{ github.actor }}",
+                "run_id": "${{ github.run_id }}"
+              }
+            }'

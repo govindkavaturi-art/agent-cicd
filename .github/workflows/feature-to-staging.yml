@@ -1,0 +1,38 @@
+name: Feature to Staging
+
+on:
+  pull_request:
+    branches: [staging]
+
+jobs:
+  test:
+    if: false  # Remove this line when using in your own repo
+    runs-on: ubuntu-latest
+    # Add service containers if your tests need them (Postgres, Redis, etc.)
+    # services:
+    #   postgres:
+    #     image: postgres:15
+    #     env:
+    #       POSTGRES_PASSWORD: test
+    #     ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up your environment
+        run: |
+          # Example for Python:
+          # python -m pip install -r requirements.txt
+          # Example for Node:
+          # npm ci
+          echo "TODO: Set up your environment here"
+      - name: Run tests
+        run: |
+          # Replace with your test command:
+          # pytest tests/ --tb=short -q
+          # npm test
+          # go test ./...
+          echo "TODO: Replace with YOUR_TEST_COMMAND"
+      - name: Auto-merge on pass
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: gh pr merge ${{ github.event.pull_request.number }} --squash --auto
