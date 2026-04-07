@@ -17,6 +17,7 @@ import time
 import requests
 
 from config import (
+    STAGING_URL,
     STAGING_HEALTH_URL,
     GITHUB_REPO,
     BOT_USERNAME,
@@ -64,7 +65,7 @@ def run_integration_tests():
         capture_output=True,
         text=True,
         timeout=TEST_TIMEOUT_MINUTES * 60,
-        env={**os.environ, "STAGING_URL": STAGING_HEALTH_URL.replace("/health", "")},
+        env={**os.environ, "STAGING_URL": STAGING_URL},
     )
     return result
 
@@ -77,7 +78,11 @@ def open_promotion_pr(commit_sha, test_output):
         "Accept": "application/vnd.github.v3+json",
     }
 
-    # Count tests from output (customize parsing for your test framework)
+    # Count tests from output (customize parsing for your test framework).
+    # pytest outputs "X passed" in the summary line. Other frameworks differ:
+    #   - jest: "Tests: X passed, Y total"
+    #   - go test: "ok" or "FAIL" per package
+    # Adjust the parsing below to match your test runner's output format.
     test_count = "all"
     for line in test_output.split("\n"):
         if "passed" in line.lower():
